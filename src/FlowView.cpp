@@ -24,6 +24,7 @@
 #include "StyleCollection.hpp"
 
 using QtNodes::FlowView;
+using QtNodes::FlowViewStyle;
 using QtNodes::FlowScene;
 
 FlowView::
@@ -36,9 +37,7 @@ FlowView(QWidget *parent)
   setDragMode(QGraphicsView::ScrollHandDrag);
   setRenderHint(QPainter::Antialiasing);
 
-  auto const &flowViewStyle = StyleCollection::flowViewStyle();
-
-  setBackgroundBrush(flowViewStyle.BackgroundColor);
+  setFlowViewStyle(&StyleCollection::flowViewStyle());
 
   //setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
   //setViewportUpdateMode(QGraphicsView::MinimalViewportUpdate);
@@ -97,6 +96,12 @@ FlowView::setScene(FlowScene *scene)
   addAction(_deleteSelectionAction);
 }
 
+void
+FlowView::setFlowViewStyle(const FlowViewStyle* style)
+{
+	_flowViewStyle = style;
+	setBackgroundBrush(_flowViewStyle->BackgroundColor);
+}
 
 void
 FlowView::
@@ -375,16 +380,14 @@ drawBackground(QPainter* painter, const QRectF& r)
       }
     };
 
-  auto const &flowViewStyle = StyleCollection::flowViewStyle();
-
   QBrush bBrush = backgroundBrush();
 
-  QPen pfine(flowViewStyle.FineGridColor, 1.0);
+  QPen pfine(_flowViewStyle->FineGridColor, 1.0);
 
   painter->setPen(pfine);
   drawGrid(15);
 
-  QPen p(flowViewStyle.CoarseGridColor, 1.0);
+  QPen p(_flowViewStyle->CoarseGridColor, 1.0);
 
   painter->setPen(p);
   drawGrid(150);

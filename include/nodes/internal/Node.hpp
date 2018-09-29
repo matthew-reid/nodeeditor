@@ -97,6 +97,29 @@ public slots: // data propagation
   void
   onDataUpdated(PortIndex index);
 
+  void
+  onPortAdded(PortType type, PortIndex index);
+
+  void
+  onPortMoved(PortType type, PortIndex oldIndex, PortIndex newIndex);
+
+  void
+  onPortRemoved(PortType type, PortIndex index);
+
+signals:
+  void
+  connectionRemoved(Connection& connection);
+
+private:
+	void
+	updateGraphics() const;
+
+	void
+	insertEntry(PortType portType, PortIndex index);
+
+	void
+	eraseEntry(PortType portType, PortIndex index);
+
 private:
 
   // addressing

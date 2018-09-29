@@ -36,6 +36,15 @@ Node(std::unique_ptr<NodeDataModel> && dataModel)
   // propagate data: model => node
   connect(_nodeDataModel.get(), &NodeDataModel::dataUpdated,
           this, &Node::onDataUpdated);
+
+  connect(_nodeDataModel.get(), &NodeDataModel::portAdded,
+	  this, &Node::onPortAdded);
+
+  connect(_nodeDataModel.get(), &NodeDataModel::portMoved,
+	  this, &Node::onPortMoved);
+
+  connect(_nodeDataModel.get(), &NodeDataModel::portRemoved,
+	  this, &Node::onPortRemoved);
 }
 
 
@@ -187,10 +196,7 @@ propagateData(std::shared_ptr<NodeData> nodeData,
   _nodeDataModel->setInData(std::move(nodeData), inPortIndex);
 
   //Recalculate the nodes visuals. A data change can result in the node taking more space than before, so this forces a recalculate+repaint on the affected node
-  _nodeGraphicsObject->setGeometryChanged();
-  _nodeGeometry.recalculateSize();
-  _nodeGraphicsObject->update();
-  _nodeGraphicsObject->moveConnections();
+  updateGraphics();
 }
 
 
@@ -205,4 +211,106 @@ onDataUpdated(PortIndex index)
 
   for (auto const & c : connections)
     c.second->propagateData(nodeData);
+}
+
+void
+Node::
+updateGraphics() const
+{
+	_nodeGraphicsObject->setGeometryChanged();
+	_nodeGeometry.recalculateSize();
+	_nodeGraphicsObject->update();
+	_nodeGraphicsObject->moveConnections();
+}
+
+void
+Node::
+insertEntry(PortType portType, PortIndex index)
+{
+	// Insert new port
+	auto& entries = _nodeState.getEntries(portType);
+	entries.insert(entries.begin() + index, NodeState::ConnectionPtrSet());
+
+	// Move subsequent port indices up by one
+	for (int i = index + 1; i < entries.size(); ++i)
+	{
+		for (const auto& value : entries[i])
+		{
+			Connection* connection = value.second;
+			Node* node = connection->getNode(portType);
+			if (node)
+			{
+				PortIndex newIndex = connection->getPortIndex(portType) + 1;
+				connection->setNodeToPort(*node, portType, newIndex);
+			}
+		}
+	}
+}
+
+void
+Node::
+eraseEntry(PortType portType, PortIndex index)
+{
+	auto& entries = _nodeState.getEntries(portType);
+	entries.erase(entries.begin() + index);
+
+	// Move subsequent port indices down by one
+	for (int i = index; i < entries.size(); ++i)
+	{
+		for (const auto& value : entries[i])
+		{
+			Connection* connection = value.second;
+			Node* node = connection->getNode(portType);
+			if (node)
+			{
+				PortIndex newIndex = connection->getPortIndex(portType) - 1;
+				connection->setNodeToPort(*node, portType, newIndex);
+			}
+		}
+	}
+}
+
+void
+Node::
+onPortAdded(PortType portType, PortIndex index)
+{
+	insertEntry(portType, index);
+
+	updateGraphics();
+}
+
+void
+Node::
+onPortMoved(PortType portType, PortIndex oldIndex, PortIndex newIndex)
+{
+	// Remove port
+	auto& entries = _nodeState.getEntries(portType);
+	auto connections = entries[oldIndex];
+
+	eraseEntry(portType, oldIndex);
+	insertEntry(portType, newIndex);
+
+	updateGraphics();
+}
+
+void
+Node::
+onPortRemoved(PortType portType, PortIndex index)
+{
+  // Remove connections to this port
+  auto& entries = _nodeState.getEntries(portType);
+	for (int i = _nodeDataModel->nPorts(portType); i < entries.size(); ++i)
+	{
+		std::vector<Connection*> connections;
+		for (const auto& value : entries[index])
+			connections.push_back(value.second);
+
+		// connections may be removed from entries in connectionRemoved()
+		for (Connection* connection : connections)
+			emit connectionRemoved(*connection);
+	}
+
+	eraseEntry(portType, index);
+
+	updateGraphics();
 }

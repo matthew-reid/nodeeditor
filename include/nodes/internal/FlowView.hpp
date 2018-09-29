@@ -8,6 +8,7 @@ namespace QtNodes
 {
 
 class FlowScene;
+class FlowViewStyle;
 
 class NODE_EDITOR_PUBLIC FlowView
   : public QGraphicsView
@@ -26,6 +27,8 @@ public:
   QAction* deleteSelectionAction() const;
 
   void setScene(FlowScene *scene);
+
+  void setFlowViewStyle(const FlowViewStyle* style);
 
 public slots:
 
@@ -65,5 +68,7 @@ private:
   QPointF _clickPos;
 
   FlowScene* _scene;
+
+  const FlowViewStyle* _flowViewStyle;
 };
 }

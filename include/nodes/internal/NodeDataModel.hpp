@@ -136,6 +136,15 @@ signals:
   void
   computingFinished();
 
+  void
+  portAdded(PortType type, PortIndex index);
+
+  void
+  portMoved(PortType type, PortIndex oldIndex, PortIndex newIndex);
+
+  void
+  portRemoved(PortType type, PortIndex index);
+
 private:
 
   NodeStyle _nodeStyle;
